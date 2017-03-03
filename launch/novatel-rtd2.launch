@@ -1,0 +1,31 @@
+<launch>
+	<!-- This is the node written by David Hodo for use with AUXOS.
+	     Modified by Jonathan Sprinkle for use with the CAT Vehicle 
+             for more up-to date roslaunching, see novatel_for_psr.launch
+	 -->
+	<!-- Start the novatel node -->
+	<node pkg="novatel" type="novatel_node" name="novatel_node" output="screen" 
+	    required="true">
+
+		<param name="port" value="/dev/ttyS0" />
+		<param name="baudrate" value="115200" />
+		<param name="baudrate" value="9600" />
+		<param name="baudrate" value="57600" />
+		<param name="odom_topic" value="/gps_odom" />
+		<!-- JMS removing this in favor of the gps_default_logs_period_ value -->
+		<!--param name="log_commands" value="BESTUTMB ONTIME 0.1; BESTVELB ONTIME 0.1" />
+		  -->
+		<!-- param name="configure_port" value="COM2,9600,RTCM,NONE" />
+		-->
+		<!-- <param name="log_commands" value="BESTUTMB ONTIME 1.0; BESTVELB ONTIME 1.0" /> -->
+		<param name="nodehz" value="10"/>
+		<param name="gps_default_logs_period" value="0.00" />
+		<param name="span_default_logs_period" value="0.1" />
+		<!--param name="ephem_log" value="false" /-->
+		<param name="child_frame_id" value="base_link" />
+		<param name="frame_id" value="/odom" />
+		<param name="base_link" value="base_link" />
+	</node>
+
+</launch>
+
