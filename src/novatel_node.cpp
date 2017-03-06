@@ -662,7 +662,7 @@ public:
     if (gps_default_logs_period_>0) {
       // request default set of gps logs at given rate
       // convert rate to string
-      ROS_INFO("Requesting default GPS messages: BESTUTMB, BESTVELB");
+      ROS_INFO("Requesting default GPS messages: BESTPOSB, BESTUTMB, BESTVELB");
       std::stringstream default_logs;
       default_logs.precision(2);
       default_logs << "BESTPOSB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
@@ -769,22 +769,22 @@ protected:
 
     name_ = ros::this_node::getName();
 
-    nh_.param("odom_topic", odom_topic_, std::string("/gps_odom"));
+    nh_.param("inspva_topic", odom_topic_, std::string("/odom_inspva"));
     ROS_INFO_STREAM(name_ << ": Odom Topic: " << odom_topic_);
 
-    nh_.param("bestpos_topic", bestpos_topic_, std::string("/bestpos"));
+    nh_.param("bestpos_topic", bestpos_topic_, std::string("/odom_bestpos"));
     ROS_INFO_STREAM(name_ << ": Bestpos Topic: " << bestpos_topic_);
 
-    nh_.param("odom_utm_topic", odom_utm_topic_, std::string("/odom"));
+    nh_.param("bestutm_topic", odom_utm_topic_, std::string("/odom_bestutm"));
     ROS_INFO_STREAM(name_ << ": Odom UTM Topic: " << odom_utm_topic_);
 
-    nh_.param("nav_sat_fix_topic", nav_sat_fix_topic_, std::string("/gps_fix"));
+    nh_.param("nav_sat_fix_topic", nav_sat_fix_topic_, std::string("/odom_gps_fix"));
     ROS_INFO_STREAM(name_ << ": NavSatFix Topic: " << nav_sat_fix_topic_);
 
-    nh_.param("ephemeris_topic", ephemeris_topic_, std::string("/ephemeris"));
+    nh_.param("ephemeris_topic", ephemeris_topic_, std::string("/odom_ephemeris"));
     ROS_INFO_STREAM(name_ << ": Ephemeris Topic: " << ephemeris_topic_);
 
-    nh_.param("dual_band_range_topic", dual_band_range_topic_, std::string("/range"));
+    nh_.param("dual_band_range_topic", dual_band_range_topic_, std::string("/odom_range"));
     ROS_INFO_STREAM(name_ << ": L1L2Range Topic: " << dual_band_range_topic_);
 
     nh_.param("port", port_, std::string("/dev/ttyUSB0"));

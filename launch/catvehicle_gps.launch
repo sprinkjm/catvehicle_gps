@@ -9,8 +9,9 @@
 
 		<param name="port" value="/dev/ttyUSB0" />
 		<param name="baudrate" value="57600" />
-		<param name="odom_topic" value="/gps_odom" />
-		<param name="odom_utm_topic" value="/odom" />
+		<param name="inspva_topic" value="/gps_odom" />
+		<param name="bestpos_topic" value="/odom" />
+		<param name="bestutm_topic" value="/odom_bestutm" />
 		<!-- JMS removing this in favor of the gps_default_logs_period_ value -->
 		<!--param name="log_commands" value="BESTUTMB ONTIME 0.1; BESTVELB ONTIME 0.1" />
 		  -->
@@ -18,8 +19,10 @@
 		-->
 		<!-- <param name="log_commands" value="BESTUTMB ONTIME 1.0; BESTVELB ONTIME 1.0" /> -->
 		<param name="nodehz" value="10"/>
-		<param name="gps_default_logs_period" value="0.00" />
-		<param name="span_default_logs_period" value="0.1" />
+        <!-- Produces BESTPOSB, BESTUTMB, BESTVELB messages, if gt 0 -->
+		<param name="gps_default_logs_period" value="0.05" />
+        <!-- Produces INSPVAB, INSCOVB messages, if gt 0 -->
+		<param name="span_default_logs_period" value="0.0" />
 		<!--param name="ephem_log" value="false" /-->
 		<param name="child_frame_id" value="/catvehicle/base_link" />
 		<param name="frame_id" value="/catvehicle/odom" />
