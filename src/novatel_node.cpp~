@@ -79,6 +79,7 @@ public:
 
     gps_.set_best_utm_position_callback(boost::bind(&NovatelNode::BestUtmHandler, this, _1, _2));
     gps_.set_best_velocity_callback(boost::bind(&NovatelNode::BestVelocityHandler, this, _1, _2));
+    gps_.set_best_position_callback(boost::bind(&NovatelNode::BestPositionHandler, this, _1, _2));
     gps_.set_best_position_ecef_callback(boost::bind(&NovatelNode::BestPositionEcefHandler, this, _1, _2));
     //gps_.set_ins_position_velocity_attitude_short_callback(boost::bind(&NovatelNode::InsPvaHandler, this, _1, _2));
     //gps_.set_ins_covariance_short_callback(boost::bind(&NovatelNode::InsCovHandler, this, _1, _2));
@@ -191,7 +192,7 @@ public:
       }
     }
 
-    odom_publisher_.publish(cur_odom_);
+    odom_utm_publisher_.publish(cur_odom_);
   }
 
 
@@ -478,6 +479,133 @@ public:
 
   }
 
+  void BestPositionHandler(Position &best_position, double timestamp) {
+    ROS_DEBUG("Received bestpos.");
+
+    // convert pva position to UTM
+    double northing, easting;
+    int zoneNum;
+    bool north;
+
+    gps_.ConvertLLaUTM(best_position.latitude, best_position.longitude, &northing, &easting, &zoneNum, &north);
+// HACK determine when/whether to publish satfix information
+/*
+    sensor_msgs::NavSatFix sat_fix;
+    sat_fix.header.stamp = ros::Time::now();
+    sat_fix.header.frame_id = frame_id_;
+
+    if (ins_pva.status == INS_SOLUTION_GOOD)
+    {
+      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
+    }
+    else 
+    {
+      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_NO_FIX;
+      std::string status_msg;
+      switch( ins_pva.status )
+	{
+		case INS_STATUS_INACTIVE:
+			status_msg = "INS_STATUS_INACTIVE";
+			break;
+		case INS_STATUS_ALIGNING:
+			status_msg = "INS_STATUS_ALIGNING -- keep driving around.";
+			break;
+		case INS_SOLUTION_NOT_GOOD:
+			status_msg = "INS_SOLUTION_NOT_GOOD -- There is high variance in azimuth estimates; try driving around.";
+			break;
+		case INS_TEST_ALIGNING:
+			status_msg = "INS_TEST_ALIGNING -- not expecting this msg.";
+			break;
+		case INS_TEST_SOLUTION_GOOD:
+			status_msg = "INS_TEST_SOLUTION_GOOD -- not expecting this msg.";
+			break;
+		case INS_BAD_GPS_AGREEMENT:
+			status_msg = "BAD_GPS_AGREEMENT or INS_SOLUTION_FREE, maybe you are in an urban canyon.";
+			break;
+		case INS_ALIGNMENT_COMPLETE:
+			status_msg = "INS_ALIGNMENT_COMPLETE -- you need to drive around to get the correct inertial reference frame and vehicle dynamics.";
+			break;
+		default:
+			status_msg = "Received message 8 or 9, refer to SPAN manual.";
+			break;
+	}
+
+      ROS_DEBUG_STREAM("INS status is " << status_msg);
+    }
+
+    sat_fix.status.service = sensor_msgs::NavSatStatus::SERVICE_GPS;
+
+    sat_fix.latitude = ins_pva.latitude;
+    sat_fix.longitude = ins_pva.longitude;
+    sat_fix.altitude = ins_pva.height;
+
+    sat_fix.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
+
+    nav_sat_fix_publisher_.publish(sat_fix);
+*/
+    nav_msgs::Odometry cur_odom_;
+    cur_odom_.header.stamp = ros::Time::now();
+    cur_odom_.header.frame_id = frame_id_;
+    cur_odom_.child_frame_id = base_link_;
+    cur_odom_.pose.pose.position.x = easting;
+    cur_odom_.pose.pose.position.y = northing;
+    cur_odom_.pose.pose.position.z = best_position.height;
+/*
+    cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(best_position.roll*degrees_to_radians,
+          best_position.pitch*degrees_to_radians,
+          psi2theta(best_position.azimuth*degrees_to_radians));
+
+    cur_odom_.twist.twist.linear.x=best_position.east_velocity;
+    cur_odom_.twist.twist.linear.y=best_position.north_velocity;
+    cur_odom_.twist.twist.linear.z=best_position.up_velocity;
+      // TODO: add covariance
+
+    // see if there is a matching ins covariance message
+    if ((cur_ins_cov_.gps_week==ins_pva.gps_week) 
+         && (cur_ins_cov_.gps_millisecs==ins_pva.gps_millisecs)) {
+
+      cur_odom_.pose.covariance[0] = cur_ins_cov_.position_covariance[0];
+      cur_odom_.pose.covariance[1] = cur_ins_cov_.position_covariance[1];
+      cur_odom_.pose.covariance[2] = cur_ins_cov_.position_covariance[2];
+      cur_odom_.pose.covariance[6] = cur_ins_cov_.position_covariance[3];
+      cur_odom_.pose.covariance[7] = cur_ins_cov_.position_covariance[4];
+      cur_odom_.pose.covariance[8] = cur_ins_cov_.position_covariance[5];
+      cur_odom_.pose.covariance[12] = cur_ins_cov_.position_covariance[6];
+      cur_odom_.pose.covariance[13] = cur_ins_cov_.position_covariance[7];
+      cur_odom_.pose.covariance[14] = cur_ins_cov_.position_covariance[8];
+
+      cur_odom_.pose.covariance[21] = cur_ins_cov_.attitude_covariance[0]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[22] = cur_ins_cov_.attitude_covariance[1]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[23] = cur_ins_cov_.attitude_covariance[2]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[27] = cur_ins_cov_.attitude_covariance[3]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[28] = cur_ins_cov_.attitude_covariance[4]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[29] = cur_ins_cov_.attitude_covariance[5]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[33] = cur_ins_cov_.attitude_covariance[6]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[34] = cur_ins_cov_.attitude_covariance[7]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[35] = cur_ins_cov_.attitude_covariance[8]*degrees_square_to_radians_square;
+
+      cur_odom_.twist.covariance[0] = cur_ins_cov_.velocity_covariance[0];
+      cur_odom_.twist.covariance[1] = cur_ins_cov_.velocity_covariance[1];
+      cur_odom_.twist.covariance[2] = cur_ins_cov_.velocity_covariance[2];
+      cur_odom_.twist.covariance[6] = cur_ins_cov_.velocity_covariance[3];
+      cur_odom_.twist.covariance[7] = cur_ins_cov_.velocity_covariance[4];
+      cur_odom_.twist.covariance[8] = cur_ins_cov_.velocity_covariance[5];
+      cur_odom_.twist.covariance[12] = cur_ins_cov_.velocity_covariance[6];
+      cur_odom_.twist.covariance[13] = cur_ins_cov_.velocity_covariance[7];
+      cur_odom_.twist.covariance[14] = cur_ins_cov_.velocity_covariance[8];
+
+    }
+*/
+    ROS_DEBUG("Publishing to bestpos_publisher_");
+//    odom_publisher_.publish(cur_odom_);
+    bestpos_publisher_.publish(cur_odom_);
+
+  }
+
+  void RawMsgHandler(unsigned char *msg) {
+    // ROS_INFO_STREAM("RAW RANGE MSG\n\tsizeof: " << sizeof(msg));
+  }
+
   void BestPositionEcefHandler(PositionEcef &best_xyz, double timestamp) {
     nav_msgs::Odometry ecef_pos;
 
@@ -503,10 +631,6 @@ public:
 
   }
 
-  void RawMsgHandler(unsigned char *msg) {
-    // ROS_INFO_STREAM("RAW RANGE MSG\n\tsizeof: " << sizeof(msg));
-  }
-
 
   void run() {
 
@@ -514,19 +638,21 @@ public:
       return;
 
     this->odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(odom_topic_,0);
+    this->odom_utm_publisher_ = nh_.advertise<nav_msgs::Odometry>(odom_utm_topic_,0);
     this->nav_sat_fix_publisher_ = nh_.advertise<sensor_msgs::NavSatFix>(nav_sat_fix_topic_,0);
     // ! FIXME - only advertise ephem/range if going to publish it.
     this->ephemeris_publisher_ = nh_.advertise<gps_msgs::Ephemeris>(ephemeris_topic_,0);
     this->dual_band_range_publisher_ = nh_.advertise<gps_msgs::L1L2Range>(dual_band_range_topic_,0);
     this->psrpos_publisher_ = nh_.advertise<sensor_msgs::NavSatFix>(psrpos_topic_,0);
     this->ecefpos_publisher_ = nh_.advertise<nav_msgs::Odometry>(ecefpos_topic_,0);
+    this->bestpos_publisher_ = nh_.advertise<nav_msgs::Odometry>(bestpos_topic_,0);
 
     //em_.setDataCallback(boost::bind(&EM61Node::HandleEmData, this, _1));
     gps_.Connect(port_,baudrate_);
 
     // JMS HACK: set the IMU OFFSET
     {
-    	ROS_INFO("Sending the SETIMUTOANTOFFSET " + imutoantoffset_);
+    	ROS_INFO_STREAM("Sending the SETIMUTOANTOFFSET " << imutoantoffset_);
     	std::stringstream setimuoffset;
     	setimuoffset << "SETIMUTOANTOFFSET "<< imutoantoffset_;
     	gps_.SendCommand(setimuoffset.str(),true);
@@ -539,6 +665,7 @@ public:
       ROS_INFO("Requesting default GPS messages: BESTUTMB, BESTVELB");
       std::stringstream default_logs;
       default_logs.precision(2);
+      default_logs << "BESTPOSB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
       default_logs << "BESTUTMB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
       default_logs << "BESTVELB ONTIME " << std::fixed << gps_default_logs_period_;
       gps_.ConfigureLogs(default_logs.str());
@@ -645,6 +772,12 @@ protected:
     nh_.param("odom_topic", odom_topic_, std::string("/gps_odom"));
     ROS_INFO_STREAM(name_ << ": Odom Topic: " << odom_topic_);
 
+    nh_.param("bestpos_topic", bestpos_topic_, std::string("/bestpos"));
+    ROS_INFO_STREAM(name_ << ": Bestpos Topic: " << bestpos_topic_);
+
+    nh_.param("odom_utm_topic", odom_utm_topic_, std::string("/odom"));
+    ROS_INFO_STREAM(name_ << ": Odom UTM Topic: " << odom_utm_topic_);
+
     nh_.param("nav_sat_fix_topic", nav_sat_fix_topic_, std::string("/gps_fix"));
     ROS_INFO_STREAM(name_ << ": NavSatFix Topic: " << nav_sat_fix_topic_);
 
@@ -712,21 +845,25 @@ protected:
   ros::NodeHandle nh_;
   std::string name_;
   ros::Publisher odom_publisher_;
+  ros::Publisher odom_utm_publisher_;
   ros::Publisher nav_sat_fix_publisher_;
   ros::Publisher ephemeris_publisher_;
   ros::Publisher dual_band_range_publisher_;
   ros::Publisher psrpos_publisher_;
   ros::Publisher ecefpos_publisher_;
+  ros::Publisher bestpos_publisher_;
 
   Novatel gps_; //
 
   // topics - why are we not using remap arguments?
   std::string odom_topic_;
+  std::string odom_utm_topic_;
   std::string nav_sat_fix_topic_;
   std::string ephemeris_topic_;
   std::string dual_band_range_topic_;
   std::string psrpos_topic_;
   std::string ecefpos_topic_;
+  std::string bestpos_topic_;
 
   std::string port_;
   std::string log_commands_;
