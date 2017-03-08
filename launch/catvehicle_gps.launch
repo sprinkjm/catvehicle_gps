@@ -3,6 +3,7 @@
 	     Modified by Jonathan Sprinkle for use with the CAT Vehicle 
              for more up-to date roslaunching, see novatel_for_psr.launch
 	 -->
+	<group ns="catvehicle">
 	<!-- Start the novatel node -->
 	<node pkg="catvehicle_gps" type="novatel_node" name="novatel_node" output="screen" 
 	    required="true">
@@ -10,8 +11,8 @@
 		<param name="port" value="/dev/ttyUSB0" />
 		<param name="baudrate" value="57600" />
 		<param name="inspva_topic" value="/gps_odom" />
-		<param name="bestpos_topic" value="/odom" />
-		<param name="bestutm_topic" value="/odom_bestutm" />
+		<param name="bestpos_topic" value="/odom_bestpos" />
+		<param name="bestutm_topic" value="/odom" />
 		<!-- JMS removing this in favor of the gps_default_logs_period_ value -->
 		<!--param name="log_commands" value="BESTUTMB ONTIME 0.1; BESTVELB ONTIME 0.1" />
 		  -->
@@ -24,10 +25,11 @@
         <!-- Produces INSPVAB, INSCOVB messages, if gt 0 -->
 		<param name="span_default_logs_period" value="0.0" />
 		<!--param name="ephem_log" value="false" /-->
-		<param name="child_frame_id" value="/catvehicle/base_link" />
-		<param name="frame_id" value="/catvehicle/odom" />
+		<param name="child_frame_id" value="catvehicle/base_link" />
+		<param name="frame_id" value="catvehicle/odom" />
 		<param name="base_link" value="base_link" />
 	</node>
+	</group>
 
 </launch>
 
